@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>meshora :: greater boston mesh</title>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="scanlines"></div>
+
+    <header id="hud">
+      <div class="brand">
+        <span class="glyph">▚</span>meshora<span class="cursor">_</span>
+        <span class="sub">GREATER&nbsp;BOSTON&nbsp;MESHCORE</span>
+      </div>
+      <div class="readouts">
+        <div class="ro"><label>NODES</label><span id="stat-nodes">0</span></div>
+        <div class="ro"><label>PKTS</label><span id="stat-packets">0</span></div>
+        <div class="ro"><label>F/MIN</label><span id="stat-fpm">0</span></div>
+      </div>
+      <div id="conn" class="conn off">OFFLINE</div>
+      <nav id="tabs">
+        <button class="tab active" data-tab="map">MAP</button>
+        <button class="tab" data-tab="packets">PACKETS</button>
+      </nav>
+    </header>
+
+    <div id="nodesearch">
+      <input class="ns-input" type="text" placeholder="⌕ search nodes…" autocomplete="off" spellcheck="false" />
+      <div class="ns-results"></div>
+    </div>
+
+    <div id="coords">––.––––N ––.––––W</div>
+    <div id="legend"></div>
+
+    <section id="packets">
+      <div class="pk-bar">
+        <span class="pk-title">// PACKETS</span>
+        <span class="pk-live">● LIVE</span>
+        <span class="pk-filters">
+          <select class="pk-ftype" title="filter by type">
+            <option value="">all types</option>
+            <option value="4">ADVERT</option>
+            <option value="2">TXT_MSG</option>
+            <option value="5">GRP_TXT</option>
+            <option value="8">PATH</option>
+            <option value="9">TRACE</option>
+            <option value="3">ACK</option>
+            <option value="0">REQ</option>
+            <option value="1">RESPONSE</option>
+            <option value="7">ANON_REQ</option>
+            <option value="6">GRP_DATA</option>
+            <option value="11">CONTROL</option>
+          </select>
+          <input class="pk-fnode" type="text" placeholder="filter by node…" />
+        </span>
+      </div>
+      <div class="pk-list"></div>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

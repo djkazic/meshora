@@ -1,0 +1,15 @@
+# compiled binary
+/meshora
+
+# SQLite runtime database
+*.db
+*.db-wal
+*.db-shm
+
+# frontend deps and build output (run `npm --prefix web ci && npm --prefix web run build` before `go build`)
+/web/node_modules/
+/web/dist/
+
+# editor / OS cruft
+.DS_Store
+*.swp
