@@ -167,6 +167,14 @@ func Decode(rawHex string) (*Packet, error) {
 	return p, nil
 }
 
+func PathHashSizeOf(rawHex string) (int, bool) {
+	p, err := Decode(rawHex)
+	if err != nil {
+		return 0, false
+	}
+	return p.PathHashSize, true
+}
+
 func decodeAdvert(buf []byte) *Advert {
 	if len(buf) < 100 {
 		return nil

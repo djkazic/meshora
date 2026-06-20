@@ -29,6 +29,12 @@ func New(st *store.Store, hub *Hub, bbox geo.BBox, staticFS fs.FS) *Server {
 	s.mux.HandleFunc("/api/flows/recent", s.handleRecentFlows)
 	s.mux.HandleFunc("/api/packets", s.handlePacketList)
 	s.mux.HandleFunc("/api/packets/{hash}", s.handlePacket)
+	s.mux.HandleFunc("/api/analytics/path-hash", s.handlePathHashStats)
+	s.mux.HandleFunc("/api/analytics/hops", s.handleHopDistribution)
+	s.mux.HandleFunc("/api/analytics/centrality", s.handleCentrality)
+	s.mux.HandleFunc("/api/analytics/routes", s.handleRoutes)
+	s.mux.HandleFunc("/api/analytics/graph", s.handleGraph)
+	s.mux.HandleFunc("/api/analytics/critical", s.handleCritical)
 	s.mux.HandleFunc("/api/config", s.handleConfig)
 	s.mux.HandleFunc("/ws", s.handleWS)
 	s.mux.Handle("/", cacheControl(http.FileServer(http.FS(staticFS))))
@@ -51,6 +57,115 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	}{st, s.Hub.ClientCount()})
 }
 
+func (s *Server) handlePathHashStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := s.st.PathHashStats()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, stats)
+}
+
+func (s *Server) handleHopDistribution(w http.ResponseWriter, r *http.Request) {
+	buckets, err := s.st.HopDistribution()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, buckets)
+}
+
+func (s *Server) handleCentrality(w http.ResponseWriter, r *http.Request) {
+	rows, err := s.st.RepeaterCentrality(50)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, rows)
+}
+
+func (s *Server) handleRoutes(w http.ResponseWriter, r *http.Request) {
+	groups, err := s.st.TopRoutes(2000)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, s.expandPaths(groups))
+}
+
+func (s *Server) handleGraph(w http.ResponseWriter, r *http.Request) {
+	edges, err := s.st.NetworkEdges(300)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	seen := map[string]bool{}
+	for _, e := range edges {
+		seen[e.A] = true
+		seen[e.B] = true
+	}
+	pks := make([]string, 0, len(seen))
+	for pk := range seen {
+		pks = append(pks, pk)
+	}
+	infos, _ := s.st.NodeInfos(pks)
+
+	type graphNode struct {
+		Pubkey string `json:"pubkey"`
+		Name   string `json:"name"`
+		Role   string `json:"role"`
+	}
+	type graphEdge struct {
+		Source string `json:"source"`
+		Target string `json:"target"`
+		Weight int    `json:"weight"`
+	}
+	nodes := make([]graphNode, 0, len(pks))
+	for _, pk := range pks {
+		nodes = append(nodes, graphNode{Pubkey: pk, Name: infos[pk].Name, Role: infos[pk].Role})
+	}
+	out := make([]graphEdge, 0, len(edges))
+	for _, e := range edges {
+		out = append(out, graphEdge{Source: e.A, Target: e.B, Weight: e.Weight})
+	}
+	writeJSON(w, struct {
+		Nodes []graphNode `json:"nodes"`
+		Edges []graphEdge `json:"edges"`
+	}{nodes, out})
+}
+
+func (s *Server) handleCritical(w http.ResponseWriter, r *http.Request) {
+	cuts, err := s.st.CriticalNodes(25)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	pks := make([]string, 0, len(cuts))
+	for _, c := range cuts {
+		pks = append(pks, c.PubKey)
+	}
+	infos, _ := s.st.NodeInfos(pks)
+
+	type criticalOut struct {
+		Pubkey    string `json:"pubkey"`
+		Name      string `json:"name"`
+		Role      string `json:"role"`
+		Fragments int    `json:"fragments"`
+		Isolated  int    `json:"isolated"`
+	}
+	out := make([]criticalOut, 0, len(cuts))
+	for _, c := range cuts {
+		out = append(out, criticalOut{
+			Pubkey:    c.PubKey,
+			Name:      infos[c.PubKey].Name,
+			Role:      infos[c.PubKey].Role,
+			Fragments: c.Fragments,
+			Isolated:  c.Isolated,
+		})
+	}
+	writeJSON(w, out)
+}
+
 func (s *Server) handleNodes(w http.ResponseWriter, r *http.Request) {
 	nodes, err := s.st.NodesPositioned(time.Now().Unix(), nodeMaxAgeSecs)
 	if err != nil {
@@ -69,6 +184,22 @@ func (s *Server) handleNodePaths(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	writeJSON(w, s.expandPaths(groups))
+}
+
+type routeHop struct {
+	Pubkey string `json:"pubkey"`
+	Name   string `json:"name"`
+	Role   string `json:"role"`
+}
+
+type routePath struct {
+	Count    int        `json:"count"`
+	LastSeen int64      `json:"last_seen"`
+	Hops     []routeHop `json:"hops"`
+}
+
+func (s *Server) expandPaths(groups []store.RawPathGroup) []routePath {
 	seen := map[string]bool{}
 	for _, g := range groups {
 		for _, pk := range splitNonEmpty(g.ResolvedPath) {
@@ -81,25 +212,15 @@ func (s *Server) handleNodePaths(w http.ResponseWriter, r *http.Request) {
 	}
 	infos, _ := s.st.NodeInfos(pks)
 
-	type hop struct {
-		Pubkey string `json:"pubkey"`
-		Name   string `json:"name"`
-		Role   string `json:"role"`
-	}
-	type pathOut struct {
-		Count    int   `json:"count"`
-		LastSeen int64 `json:"last_seen"`
-		Hops     []hop `json:"hops"`
-	}
-	out := make([]pathOut, 0, len(groups))
+	out := make([]routePath, 0, len(groups))
 	for _, g := range groups {
-		hops := []hop{}
+		hops := []routeHop{}
 		for _, pk := range splitNonEmpty(g.ResolvedPath) {
-			hops = append(hops, hop{Pubkey: pk, Name: infos[pk].Name, Role: infos[pk].Role})
+			hops = append(hops, routeHop{Pubkey: pk, Name: infos[pk].Name, Role: infos[pk].Role})
 		}
-		out = append(out, pathOut{Count: g.Count, LastSeen: g.LastSeen, Hops: hops})
+		out = append(out, routePath{Count: g.Count, LastSeen: g.LastSeen, Hops: hops})
 	}
-	writeJSON(w, out)
+	return out
 }
 
 func (s *Server) handlePacketList(w http.ResponseWriter, r *http.Request) {

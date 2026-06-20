@@ -7,6 +7,7 @@ import { TimeMachine } from "./timeline";
 import { connectWS } from "./ws";
 import { NodeWindow, PacketWindow } from "./modal";
 import { PacketsView } from "./packets";
+import { AnalyticsView } from "./analytics";
 import { NodeSearch } from "./search";
 import { LEGEND_ROLES } from "./palette";
 import type { FlowRec, WSMessage } from "./types";
@@ -31,7 +32,8 @@ async function boot(): Promise<void> {
   time.setFeed(trollbox);
 
   const packetsView = new PacketsView((hash) => openPacket(hash));
-  wireTabs(packetsView);
+  const analyticsView = new AnalyticsView(openNode);
+  wireTabs(packetsView, analyticsView);
   packetsView.refresh();
   positionPacketsBelowHud();
 
@@ -99,10 +101,12 @@ function buildLegend(): void {
 function positionPacketsBelowHud(): void {
   const hud = document.getElementById("hud")!;
   const packets = document.getElementById("packets")!;
+  const analytics = document.getElementById("analytics")!;
   const search = document.getElementById("nodesearch")!;
   const place = () => {
     const bottom = hud.getBoundingClientRect().bottom;
     packets.style.top = `${bottom + 8}px`;
+    analytics.style.top = `${bottom + 8}px`;
     const zoom = document.querySelector<HTMLElement>(".leaflet-top.leaflet-left");
     if (window.innerWidth < 640) {
       search.style.top = `${bottom + 8}px`;
@@ -121,15 +125,18 @@ function positionPacketsBelowHud(): void {
   new ResizeObserver(place).observe(hud);
 }
 
-function wireTabs(packets: PacketsView): void {
+function wireTabs(packets: PacketsView, analytics: AnalyticsView): void {
   document.body.classList.add("tab-map");
   for (const btn of document.querySelectorAll<HTMLElement>(".tab")) {
     btn.addEventListener("click", () => {
       const tab = btn.dataset.tab!;
       document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
       document.body.classList.toggle("tab-packets", tab === "packets");
+      document.body.classList.toggle("tab-analytics", tab === "analytics");
       document.body.classList.toggle("tab-map", tab === "map");
       if (tab === "packets") packets.refresh();
+      if (tab === "analytics") analytics.refresh();
+      else analytics.deactivate();
     });
   }
 }

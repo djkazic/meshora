@@ -23,6 +23,7 @@
       <nav id="tabs">
         <button class="tab active" data-tab="map">MAP</button>
         <button class="tab" data-tab="packets">PACKETS</button>
+        <button class="tab" data-tab="analytics">ANALYTICS</button>
       </nav>
     </header>
 
@@ -57,6 +58,40 @@
         </span>
       </div>
       <div class="pk-list"></div>
+    </section>
+
+    <section id="analytics">
+      <div class="an-bar"><span class="an-title">// ANALYTICS</span></div>
+      <div class="an-grid">
+        <figure class="an-card">
+          <figcaption>OBSERVED PACKETS</figcaption>
+          <div class="an-chart" data-chart="packets"></div>
+        </figure>
+        <figure class="an-card">
+          <figcaption>REPEATERS</figcaption>
+          <div class="an-chart" data-chart="repeaters"></div>
+        </figure>
+        <figure class="an-card an-wide">
+          <figcaption>HOP DISTRIBUTION</figcaption>
+          <div class="an-chart" data-chart="hops"></div>
+        </figure>
+        <figure class="an-card an-wide">
+          <figcaption>TOP REPEATERS BY CENTRALITY</figcaption>
+          <div class="an-chart" data-chart="centrality"></div>
+        </figure>
+        <figure class="an-card an-wide">
+          <figcaption>TOP ROUTES BY FREQUENCY</figcaption>
+          <div class="an-chart" data-chart="routes"></div>
+        </figure>
+        <figure class="an-card an-wide">
+          <figcaption>CRITICAL NODES (CUT VERTICES)</figcaption>
+          <div class="an-chart" data-chart="critical"></div>
+        </figure>
+        <figure class="an-card an-full">
+          <figcaption>NETWORK GRAPH</figcaption>
+          <div class="an-chart" data-chart="graph"></div>
+        </figure>
+      </div>
     </section>
 
     <script type="module" src="/src/main.ts"></script>

@@ -164,7 +164,8 @@ body {
   z-index: 1100;
   width: 260px;
 }
-body.tab-packets #nodesearch {
+body.tab-packets #nodesearch,
+body.tab-analytics #nodesearch {
   display: none;
 }
 .ns-input {
@@ -691,8 +692,220 @@ body.tab-packets #trollbox,
 body.tab-packets #timeline,
 body.tab-packets #legend,
 body.tab-packets #coords,
-body.tab-packets .leaflet-control-container {
+body.tab-packets .leaflet-control-container,
+body.tab-analytics #trollbox,
+body.tab-analytics #timeline,
+body.tab-analytics #legend,
+body.tab-analytics #coords,
+body.tab-analytics .leaflet-control-container {
   display: none;
+}
+
+#analytics {
+  position: absolute;
+  inset: 64px 10px 10px 10px;
+  z-index: 900;
+  display: none;
+  flex-direction: column;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  overflow: auto;
+}
+body.tab-analytics #analytics {
+  display: flex;
+}
+.an-bar {
+  display: flex;
+  align-items: center;
+  padding: 7px 11px;
+  border-bottom: 1px solid var(--border);
+}
+.an-title {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--fg-dim);
+}
+.an-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  align-content: flex-start;
+}
+.an-card {
+  flex: 1 1 260px;
+  min-width: 240px;
+  margin: 0;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.an-card figcaption {
+  margin-bottom: 14px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--fg-dim);
+  text-align: center;
+}
+.an-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.an-pie {
+  width: 180px;
+  height: 180px;
+  filter: drop-shadow(0 0 6px rgba(94, 243, 140, 0.18));
+}
+.an-pie path,
+.an-pie circle {
+  stroke: var(--panel);
+  stroke-width: 1.5;
+}
+.an-legend {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.an-leg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.an-leg i {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  box-shadow: 0 0 5px currentColor;
+}
+.an-leg-l {
+  min-width: 52px;
+  color: var(--fg);
+}
+.an-leg-v {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.an-total {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--fg-mute);
+}
+.an-empty {
+  padding: 40px 0;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--fg-mute);
+}
+.an-card.an-wide {
+  flex: 1 1 380px;
+  min-width: 320px;
+}
+.an-card.an-full {
+  flex: 1 1 100%;
+}
+.an-graph {
+  display: block;
+  width: 100%;
+  cursor: grab;
+  background: rgba(0, 20, 8, 0.18);
+  border: 1px solid var(--border);
+}
+.an-bars {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.an-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.an-bar-k {
+  width: 28px;
+  text-align: right;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.an-bar-track {
+  flex: 1;
+  height: 12px;
+  background: rgba(28, 58, 46, 0.4);
+}
+.an-bar-track i {
+  display: block;
+  height: 100%;
+  background: var(--fg);
+  box-shadow: 0 0 5px rgba(94, 243, 140, 0.5);
+}
+.an-bar-v {
+  width: 56px;
+  text-align: right;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.an-ct-wrap {
+  width: 100%;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.an-ctab {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.an-ctab thead th {
+  position: sticky;
+  top: 0;
+  padding: 4px 8px;
+  text-align: left;
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: var(--fg-mute);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.an-ctab th:nth-child(3),
+.an-ctab th:nth-child(4),
+.an-ct-n,
+.an-ct-p {
+  text-align: right;
+}
+.an-ctab tbody tr {
+  border-bottom: 1px solid rgba(28, 58, 46, 0.35);
+}
+.an-ctab tbody tr[data-pk] {
+  cursor: pointer;
+}
+.an-ctab tbody tr[data-pk]:hover {
+  background: rgba(94, 243, 140, 0.07);
+}
+.an-ctab td {
+  padding: 4px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.an-rank {
+  color: var(--fg-mute);
+}
+.an-ct-name {
+  color: var(--fg);
+  max-width: 0;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: normal;
+}
+.an-ct-n {
+  color: var(--fg-dim);
+}
+.an-ct-p {
+  color: var(--amber);
 }
 .pk-bar {
   display: flex;

@@ -13,6 +13,7 @@ import (
 
 	"github.com/djkazic/meshora/internal/geo"
 	"github.com/djkazic/meshora/internal/ingest"
+	"github.com/djkazic/meshora/internal/meshcore"
 	"github.com/djkazic/meshora/internal/server"
 	"github.com/djkazic/meshora/internal/store"
 	"github.com/djkazic/meshora/web"
@@ -38,6 +39,12 @@ func main() {
 		log.Fatalf("open db: %v", err)
 	}
 	defer st.Close()
+
+	if n, err := st.BackfillPathHashSizes(meshcore.PathHashSizeOf); err != nil {
+		log.Printf("backfill path hash sizes: %v", err)
+	} else if n > 0 {
+		log.Printf("backfilled path hash size for %d transmissions", n)
+	}
 
 	hub := server.NewHub()
 	proc, err := ingest.NewProcessor(st, hub)

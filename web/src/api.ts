@@ -6,6 +6,12 @@ import type {
   NodeT,
   PacketDetail,
   PacketListItem,
+  PathHashStats,
+  HopBucket,
+  CentralityRow,
+  RouteRow,
+  NetworkGraph,
+  CriticalNode,
 } from "./types";
 
 async function getJSON<T>(path: string): Promise<T> {
@@ -32,3 +38,13 @@ export const getPacketList = (limit = 200, type = "", node = "") => {
 };
 export const getStats = () =>
   getJSON<{ transmissions: number; nodes_with_pos: number }>("/api/stats");
+export const getPathHashStats = () =>
+  getJSON<PathHashStats>("/api/analytics/path-hash");
+export const getHopDistribution = () =>
+  getJSON<HopBucket[]>("/api/analytics/hops");
+export const getCentrality = () =>
+  getJSON<CentralityRow[]>("/api/analytics/centrality");
+export const getRoutes = () => getJSON<RouteRow[]>("/api/analytics/routes");
+export const getGraph = () => getJSON<NetworkGraph>("/api/analytics/graph");
+export const getCritical = () =>
+  getJSON<CriticalNode[]>("/api/analytics/critical");

@@ -103,6 +103,7 @@ func (p *Processor) Handle(pk Packet) {
 		ResolvedPath: joinHops(pk.ResolvedPath),
 		Channel:      chatChannel,
 		MsgText:      chatText,
+		PathHashSize: decoded.PathHashSize,
 		Ts:           pk.Ts,
 	}
 	obs := store.Observation{

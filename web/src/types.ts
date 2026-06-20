@@ -102,6 +102,65 @@ export interface PacketListItem {
   detail: string;
 }
 
+export interface HashSizeCount {
+  size: number;
+  count: number;
+}
+
+export interface PathHashStats {
+  packets: HashSizeCount[];
+  repeaters: HashSizeCount[];
+}
+
+export interface HopBucket {
+  hops: number;
+  count: number;
+}
+
+export interface CentralityRow {
+  pubkey: string;
+  name: string;
+  path_count: number;
+  percentile: number;
+}
+
+export interface RouteHop {
+  pubkey: string;
+  name: string;
+  role: string;
+}
+
+export interface RouteRow {
+  count: number;
+  last_seen: number;
+  hops: RouteHop[];
+}
+
+export interface GraphNode {
+  pubkey: string;
+  name: string;
+  role: string;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  weight: number;
+}
+
+export interface NetworkGraph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface CriticalNode {
+  pubkey: string;
+  name: string;
+  role: string;
+  fragments: number;
+  isolated: number;
+}
+
 export interface Config {
   bbox: { minLat: number; maxLat: number; minLon: number; maxLon: number };
   center: { lat: number; lon: number };
