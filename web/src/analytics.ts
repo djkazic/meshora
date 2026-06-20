@@ -11,6 +11,14 @@ const HASH_COLORS: Record<number, string> = {
 
 const HOP_CAP = 10;
 
+const PERIODS: [string, string][] = [
+  ["1d", "1D"],
+  ["7d", "7D"],
+  ["", "ALL"],
+];
+
+const PERIOD_PANES = ["packets", "repeaters", "hops", "centrality", "routes"];
+
 interface Slice {
   label: string;
   count: number;
@@ -20,6 +28,7 @@ interface Slice {
 export class AnalyticsView {
   private charts: Map<string, HTMLElement> = new Map();
   private graph: NetGraph | null = null;
+  private periods: Map<string, string> = new Map();
 
   constructor(private onNode: (pubkey: string) => void) {
     for (const el of document.querySelectorAll<HTMLElement>("#analytics .an-chart")) {
@@ -27,25 +36,12 @@ export class AnalyticsView {
     }
     const host = this.charts.get("graph");
     if (host) this.graph = new NetGraph(host, onNode);
+    for (const key of PERIOD_PANES) this.buildSelector(key);
   }
 
   async refresh(): Promise<void> {
     await Promise.all([
-      getPathHashStats()
-        .then((s) => {
-          this.renderPie("packets", s.packets);
-          this.renderPie("repeaters", s.repeaters);
-        })
-        .catch(() => {}),
-      getHopDistribution()
-        .then((b) => this.renderHops(b))
-        .catch(() => {}),
-      getCentrality()
-        .then((r) => this.renderCentrality(r))
-        .catch(() => {}),
-      getRoutes()
-        .then((r) => this.renderRoutes(r))
-        .catch(() => {}),
+      ...PERIOD_PANES.map((key) => this.fetchPane(key)),
       getCritical()
         .then((c) => this.renderCritical(c))
         .catch(() => {}),
@@ -53,6 +49,40 @@ export class AnalyticsView {
         .then((g) => this.graph?.render(g))
         .catch(() => {}),
     ]);
+  }
+
+  private fetchPane(key: string): Promise<void> {
+    const p = this.periods.get(key) ?? "";
+    switch (key) {
+      case "packets":
+        return getPathHashStats(p).then((s) => this.renderPie("packets", s.packets)).catch(() => {});
+      case "repeaters":
+        return getPathHashStats(p).then((s) => this.renderPie("repeaters", s.repeaters)).catch(() => {});
+      case "hops":
+        return getHopDistribution(p).then((b) => this.renderHops(b)).catch(() => {});
+      case "centrality":
+        return getCentrality(p).then((r) => this.renderCentrality(r)).catch(() => {});
+      case "routes":
+        return getRoutes(p).then((r) => this.renderRoutes(r)).catch(() => {});
+      default:
+        return Promise.resolve();
+    }
+  }
+
+  private buildSelector(key: string): void {
+    const caption = this.charts.get(key)?.parentElement?.querySelector("figcaption");
+    if (!caption) return;
+    const sel = document.createElement("span");
+    sel.className = "an-period";
+    sel.innerHTML = PERIODS.map(([v, label]) => `<button data-p="${v}"${v === "" ? ' class="on"' : ""}>${label}</button>`).join("");
+    caption.appendChild(sel);
+    sel.querySelectorAll<HTMLButtonElement>("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.periods.set(key, btn.dataset.p!);
+        sel.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b === btn));
+        this.fetchPane(key);
+      });
+    });
   }
 
   deactivate(): void {
@@ -126,7 +156,8 @@ export class AnalyticsView {
     el.innerHTML =
       `<div class="an-ct-wrap"><table class="an-ctab">` +
       `<thead><tr><th>#</th><th>repeater</th><th>paths</th><th>pctl</th></tr></thead>` +
-      `<tbody>${rows}</tbody></table></div>`;
+      `<tbody>${rows}</tbody></table></div>` +
+      `<div class="an-note">observed relay participation, skewed by observer coverage. not physical reach</div>`;
     el.querySelectorAll<HTMLElement>("tr[data-pk]").forEach((tr) => {
       tr.onclick = () => this.onNode(tr.dataset.pk!);
     });
@@ -177,7 +208,8 @@ export class AnalyticsView {
     el.innerHTML =
       `<div class="an-ct-wrap"><table class="an-ctab">` +
       `<thead><tr><th>#</th><th>repeater</th><th>splits</th><th>cut off</th></tr></thead>` +
-      `<tbody>${rows}</tbody></table></div>`;
+      `<tbody>${rows}</tbody></table></div>` +
+      `<div class="an-note">cut vertices in observed paths, not physical chokepoints. the mesh likely has redundant links we never saw</div>`;
     el.querySelectorAll<HTMLElement>("tr[data-pk]").forEach((tr) => {
       tr.onclick = () => this.onNode(tr.dataset.pk!);
     });

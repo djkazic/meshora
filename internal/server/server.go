@@ -57,8 +57,19 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	}{st, s.Hub.ClientCount()})
 }
 
+func periodSince(r *http.Request) int64 {
+	switch r.URL.Query().Get("period") {
+	case "1d":
+		return time.Now().Unix() - 86400
+	case "7d":
+		return time.Now().Unix() - 7*86400
+	default:
+		return 0
+	}
+}
+
 func (s *Server) handlePathHashStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := s.st.PathHashStats()
+	stats, err := s.st.PathHashStats(periodSince(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -67,7 +78,7 @@ func (s *Server) handlePathHashStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleHopDistribution(w http.ResponseWriter, r *http.Request) {
-	buckets, err := s.st.HopDistribution()
+	buckets, err := s.st.HopDistribution(periodSince(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -76,7 +87,7 @@ func (s *Server) handleHopDistribution(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCentrality(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.st.RepeaterCentrality(50)
+	rows, err := s.st.RepeaterCentrality(50, periodSince(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -85,7 +96,7 @@ func (s *Server) handleCentrality(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRoutes(w http.ResponseWriter, r *http.Request) {
-	groups, err := s.st.TopRoutes(2000)
+	groups, err := s.st.TopRoutes(2000, periodSince(r))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

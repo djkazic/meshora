@@ -386,14 +386,22 @@ LIMIT ?`, "%"+strings.ToLower(pubkey)+"%", limit)
 	return scanPathGroups(rows)
 }
 
-func (s *Store) TopRoutes(limit int) ([]RawPathGroup, error) {
-	rows, err := s.db.Query(`
+func (s *Store) TopRoutes(limit int, since int64) ([]RawPathGroup, error) {
+	query := `
 SELECT resolved_path, count(*), MAX(first_seen)
 FROM transmissions
-WHERE resolved_path != ''
+WHERE resolved_path != ''`
+	var args []any
+	if since > 0 {
+		query += ` AND first_seen >= ?`
+		args = append(args, since)
+	}
+	query += `
 GROUP BY resolved_path
 ORDER BY count(*) DESC, MAX(first_seen) DESC
-LIMIT ?`, limit)
+LIMIT ?`
+	args = append(args, limit)
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -527,20 +535,32 @@ type PathHashStats struct {
 	Repeaters []HashSizeCount `json:"repeaters"`
 }
 
-func (s *Store) PathHashStats() (PathHashStats, error) {
-	packets, err := s.sizeCounts(`SELECT path_hash_size, COUNT(*) FROM transmissions WHERE path_hash_size IN (1, 2, 3) GROUP BY path_hash_size`)
+func (s *Store) PathHashStats(since int64) (PathHashStats, error) {
+	pktQuery := `SELECT path_hash_size, COUNT(*) FROM transmissions WHERE path_hash_size IN (1, 2, 3)`
+	repQuery := `SELECT hash_size, COUNT(*) FROM nodes WHERE role = 'repeater' AND hash_size IN (1, 2, 3)`
+	var pktArgs, repArgs []any
+	if since > 0 {
+		pktQuery += ` AND first_seen >= ?`
+		pktArgs = append(pktArgs, since)
+		repQuery += ` AND last_seen >= ?`
+		repArgs = append(repArgs, since)
+	}
+	pktQuery += ` GROUP BY path_hash_size`
+	repQuery += ` GROUP BY hash_size`
+
+	packets, err := s.sizeCounts(pktQuery, pktArgs...)
 	if err != nil {
 		return PathHashStats{}, err
 	}
-	repeaters, err := s.sizeCounts(`SELECT hash_size, COUNT(*) FROM nodes WHERE role = 'repeater' AND hash_size IN (1, 2, 3) GROUP BY hash_size`)
+	repeaters, err := s.sizeCounts(repQuery, repArgs...)
 	if err != nil {
 		return PathHashStats{}, err
 	}
 	return PathHashStats{Packets: spread(packets), Repeaters: spread(repeaters)}, nil
 }
 
-func (s *Store) sizeCounts(query string) (map[int]int, error) {
-	rows, err := s.db.Query(query)
+func (s *Store) sizeCounts(query string, args ...any) (map[int]int, error) {
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -616,14 +636,19 @@ type HopBucket struct {
 	Count int `json:"count"`
 }
 
-func (s *Store) HopDistribution() ([]HopBucket, error) {
-	rows, err := s.db.Query(`
+func (s *Store) HopDistribution(since int64) ([]HopBucket, error) {
+	query := `
 SELECT CASE WHEN path_json IS NULL OR path_json = '' THEN 0
             ELSE length(path_json) - length(replace(path_json, ',', '')) + 1 END AS hops,
        COUNT(*)
-FROM transmissions
-GROUP BY hops
-ORDER BY hops`)
+FROM transmissions`
+	var args []any
+	if since > 0 {
+		query += ` WHERE first_seen >= ?`
+		args = append(args, since)
+	}
+	query += ` GROUP BY hops ORDER BY hops`
+	rows, err := s.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -646,7 +671,7 @@ type CentralityRow struct {
 	Percentile float64 `json:"percentile"`
 }
 
-func (s *Store) RepeaterCentrality(limit int) ([]CentralityRow, error) {
+func (s *Store) RepeaterCentrality(limit int, since int64) ([]CentralityRow, error) {
 	names := map[string]string{}
 	score := map[string]int{}
 	rows, err := s.db.Query(`SELECT lower(pubkey), name FROM nodes WHERE role = 'repeater'`)
@@ -667,7 +692,13 @@ func (s *Store) RepeaterCentrality(limit int) ([]CentralityRow, error) {
 		return []CentralityRow{}, nil
 	}
 
-	paths, err := s.db.Query(`SELECT resolved_path FROM transmissions WHERE resolved_path != ''`)
+	pathQuery := `SELECT resolved_path FROM transmissions WHERE resolved_path != ''`
+	var pathArgs []any
+	if since > 0 {
+		pathQuery += ` AND first_seen >= ?`
+		pathArgs = append(pathArgs, since)
+	}
+	paths, err := s.db.Query(pathQuery, pathArgs...)
 	if err != nil {
 		return nil, err
 	}
